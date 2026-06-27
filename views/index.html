@@ -1,0 +1,32 @@
+{{define "content"}}
+<div class="text-center py-16">
+    <h1 class="text-5xl font-bold text-gray-900 mb-4">Welcome to Fermat Academy</h1>
+    <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">Master mathematics and science with structured lessons, interactive artifacts, and AI-powered tutoring.</p>
+    <div class="flex justify-center space-x-4">
+        <a href="/lessons" class="bg-purple-600 text-white px-8 py-3 rounded-xl text-lg font-medium hover:bg-purple-700 transition">Start Learning</a>
+        {{if not .User}}
+        <a href="/signup" class="bg-white text-purple-600 border-2 border-purple-600 px-8 py-3 rounded-xl text-lg font-medium hover:bg-purple-50 transition">Create Account</a>
+        {{end}}
+    </div>
+</div>
+
+<div class="mt-16">
+    <h2 class="text-2xl font-bold text-gray-900 mb-8">Latest Lessons</h2>
+    {{$data := .Data}}
+    {{if $data}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {{range $data}}
+        <a href="/lessons/{{.ID}}" class="block bg-white rounded-xl shadow-sm border hover:shadow-md transition p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">{{.Title}}</h3>
+            <p class="text-gray-600 text-sm mb-4">{{.Description}}</p>
+            <span class="text-xs text-gray-400">{{.CreatedAt}}</span>
+        </a>
+        {{end}}
+    </div>
+    {{else}}
+    <div class="text-center py-12 text-gray-500">
+        <p class="text-lg">No lessons yet. Check back soon!</p>
+    </div>
+    {{end}}
+</div>
+{{end}}

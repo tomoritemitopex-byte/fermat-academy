@@ -1,0 +1,77 @@
+{{define "content"}}
+{{$data := .Data}}
+{{$lesson := $data.Lesson}}
+<div class="py-8">
+    <div class="mb-8">
+        <a href="/lessons" class="text-purple-600 hover:underline text-sm">&larr; Back to Lessons</a>
+        <h1 class="text-3xl font-bold text-gray-900 mt-2">{{$lesson.Title}}</h1>
+        <p class="text-gray-600 mt-2">{{$lesson.Description}}</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2">
+            {{if $lesson.YoutubeURL}}
+            <div class="aspect-video bg-gray-200 rounded-xl overflow-hidden mb-8">
+                <iframe class="w-full h-full" src="{{$lesson.YoutubeURL}}" frameborder="0" allowfullscreen></iframe>
+            </div>
+            {{end}}
+
+            <div class="prose max-w-none">
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    {{$lesson.Content}}
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-xl shadow-sm border p-6 sticky top-8">
+                <h3 class="font-semibold text-gray-900 mb-4">Your Artifacts</h3>
+                {{if $data.Artifacts}}
+                    <div class="space-y-3">
+                        {{range $data.Artifacts}}
+                            {{if eq .ArtifactType "highlighters"}}
+                            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-2xl">🖌️</span>
+                                    <span class="font-medium text-purple-700">Auto Highlighter</span>
+                                </div>
+                                <p class="text-sm text-purple-600 mt-2">Key passages are highlighted below.</p>
+                            </div>
+                            {{end}}
+                            {{if eq .ArtifactType "flashcards"}}
+                            <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-2xl">🃏</span>
+                                    <span class="font-medium text-orange-700">Flashcards</span>
+                                </div>
+                                <p class="text-sm text-orange-600 mt-2">Test your knowledge with flashcards.</p>
+                            </div>
+                            {{end}}
+                            {{if eq .ArtifactType "textbook"}}
+                            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-2xl">📖</span>
+                                    <span class="font-medium text-amber-700">Textbook PDF</span>
+                                </div>
+                                <p class="text-sm text-amber-600 mt-2">Download the full textbook PDF.</p>
+                            </div>
+                            {{end}}
+                            {{if eq .ArtifactType "audio"}}
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-2xl">🎧</span>
+                                    <span class="font-medium text-green-700">Audio Lesson</span>
+                                </div>
+                                <p class="text-sm text-green-600 mt-2">Listen to the audio version.</p>
+                            </div>
+                            {{end}}
+                        {{end}}
+                    </div>
+                {{else}}
+                    <p class="text-gray-500 text-sm">No artifacts active. <a href="/profile" class="text-purple-600 hover:underline">Manage in profile</a></p>
+                {{end}}
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}

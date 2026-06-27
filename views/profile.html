@@ -1,0 +1,69 @@
+{{define "content"}}
+{{$d := .Data}}
+<div class="py-8">
+    <div class="bg-white rounded-xl shadow-sm border p-8 mb-8">
+        <div class="flex items-center space-x-6">
+            <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center text-3xl font-bold text-purple-600">
+                {{.User.Name}}
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">{{.User.Name}}</h1>
+                <p class="text-gray-500">{{.User.Email}}</p>
+                <div class="flex items-center space-x-4 mt-2">
+                    <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">{{index $d "XP"}} XP</span>
+                    <span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">Level {{index $d "Level"}}</span>
+                    <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">🔥 {{index $d "Streak"}} day streak</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Badges</h2>
+            <div class="grid grid-cols-4 gap-4">
+                {{range .BadgeList}}
+                <div class="text-center p-3 rounded-lg {{if .Earned}}bg-purple-50{{else}}bg-gray-50{{end}}">
+                    <div class="text-3xl mb-1 {{if not .Earned}}opacity-30{{end}}">{{.Icon}}</div>
+                    <div class="text-xs {{if .Earned}}text-purple-700 font-medium{{else}}text-gray-400{{end}}">{{.Name}}</div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Artifacts</h2>
+            <div class="space-y-4">
+                {{range .ArtifactPairs}}
+                <div class="border rounded-lg p-4">
+                    <h3 class="text-sm font-medium text-gray-500 mb-3">{{.PairName}}</h3>
+                    <div class="space-y-3">
+                        {{range .Items}}
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xl">{{.Icon}}</span>
+                                <span class="text-sm {{if not .Unlocked}}text-gray-400{{else}}text-gray-700{{end}}">{{.Name}}</span>
+                            </div>
+                            <div>
+                                {{if .Unlocked}}
+                                <form method="POST" action="/profile" class="inline">
+                                    <input type="hidden" name="artifact_type" value="{{.Type}}">
+                                    <input type="hidden" name="action" value="toggle">
+                                    <button type="submit" class="px-3 py-1 text-xs rounded {{if .Active}}bg-purple-100 text-purple-700{{else}}bg-gray-100 text-gray-500{{end}}">
+                                        {{if .Active}}Active{{else}}Inactive{{end}}
+                                    </button>
+                                </form>
+                                {{else}}
+                                <span class="text-xs text-gray-400">🔒 Locked</span>
+                                {{end}}
+                            </div>
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}

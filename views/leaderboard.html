@@ -1,0 +1,46 @@
+{{define "content"}}
+{{$d := .Data}}
+<div class="py-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Leaderboard</h1>
+    {{if $d}}
+    <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b">
+                <tr>
+                    <th class="text-left px-6 py-4 text-sm font-medium text-gray-500">Rank</th>
+                    <th class="text-left px-6 py-4 text-sm font-medium text-gray-500">Name</th>
+                    <th class="text-right px-6 py-4 text-sm font-medium text-gray-500">XP</th>
+                    <th class="text-right px-6 py-4 text-sm font-medium text-gray-500">Artifacts</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                {{range $d}}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        {{if eq .Rank 1}}<span class="text-2xl">🥇</span>
+                        {{else if eq .Rank 2}}<span class="text-2xl">🥈</span>
+                        {{else if eq .Rank 3}}<span class="text-2xl">🥉</span>
+                        {{else}}<span class="text-gray-500 font-medium">{{.Rank}}</span>{{end}}
+                    </td>
+                    <td class="px-6 py-4 font-medium text-gray-900">{{.Name}}</td>
+                    <td class="px-6 py-4 text-right font-medium text-purple-600">{{.XP}}</td>
+                    <td class="px-6 py-4 text-right">
+                        {{range .ArtifactTypes}}
+                            {{if eq . "highlighters"}}🖌️{{end}}
+                            {{if eq . "flashcards"}}🃏{{end}}
+                            {{if eq . "textbook"}}📖{{end}}
+                            {{if eq . "audio"}}🎧{{end}}
+                        {{end}}
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+    {{else}}
+    <div class="text-center py-16 text-gray-500">
+        <p class="text-lg">No students on the leaderboard yet.</p>
+    </div>
+    {{end}}
+</div>
+{{end}}

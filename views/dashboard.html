@@ -1,0 +1,76 @@
+{{define "content"}}
+{{$d := .Data}}
+<div class="py-8">
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+        <a href="/admin/lessons/new" class="bg-purple-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-purple-700 transition">+ New Lesson</a>
+    </div>
+
+    <div class="grid grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <p class="text-sm text-gray-500">Total Students</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{$d.TotalStudents}}</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <p class="text-sm text-gray-500">Total Lessons</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{$d.TotalLessons}}</p>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <p class="text-sm text-gray-500">Pending Questions</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">{{$d.FlaggedCount}}</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border p-6 mb-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Analytics</h2>
+        <p class="text-gray-500 text-sm">Charts will be displayed here (Recharts integration coming).</p>
+        <div class="grid grid-cols-2 gap-4 mt-4">
+            <div class="bg-gray-50 rounded-lg p-6 text-center text-gray-400">
+                <p class="text-sm">Student Signups Over Time</p>
+                <div class="h-32 flex items-center justify-center border-2 border-dashed border-gray-200 rounded mt-2">
+                    <span class="text-xs">Chart placeholder</span>
+                </div>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-6 text-center text-gray-400">
+                <p class="text-sm">XP Earned Over Time</p>
+                <div class="h-32 flex items-center justify-center border-2 border-dashed border-gray-200 rounded mt-2">
+                    <span class="text-xs">Chart placeholder</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border p-6 mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-gray-900">Lessons</h2>
+            <a href="/admin/lessons/new" class="text-purple-600 hover:underline text-sm">+ Add</a>
+        </div>
+        {{if $d.Lessons}}
+        <div class="divide-y">
+            {{range $d.Lessons}}
+            <div class="flex items-center justify-between py-4">
+                <div>
+                    <h3 class="font-medium text-gray-900">{{.Title}}</h3>
+                    <p class="text-sm text-gray-500">{{.Description}}</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <a href="/admin/lessons/{{.ID}}/edit" class="text-sm text-purple-600 hover:underline">Edit</a>
+                    <a href="/admin/delete?id={{.ID}}" class="text-sm text-red-600 hover:underline" onclick="return confirm('Delete this lesson?')">Delete</a>
+                </div>
+            </div>
+            {{end}}
+        </div>
+        {{else}}
+        <p class="text-gray-500 text-sm">No lessons yet.</p>
+        {{end}}
+    </div>
+
+    {{if gt $d.FlaggedCount 0}}
+    <div class="bg-white rounded-xl shadow-sm border p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Flagged Q&A ({{$d.FlaggedCount}})</h2>
+        <p class="text-gray-500 text-sm">Questions where Dr. Femi couldn't find answers in lesson notes. Click to review.</p>
+        <a href="/admin/flagged-qa" class="mt-3 inline-block text-purple-600 hover:underline text-sm">View all flagged questions →</a>
+    </div>
+    {{end}}
+</div>
+{{end}}

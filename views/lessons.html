@@ -1,0 +1,21 @@
+{{define "content"}}
+<div class="py-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">All Lessons</h1>
+    {{$data := .Data}}
+    {{if $data}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {{range $data}}
+        <a href="/lessons/{{.ID}}" class="block bg-white rounded-xl shadow-sm border hover:shadow-md transition p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">{{.Title}}</h3>
+            <p class="text-gray-600 text-sm mb-4">{{.Description}}</p>
+            <span class="text-xs text-gray-400">{{.CreatedAt}}</span>
+        </a>
+        {{end}}
+    </div>
+    {{else}}
+    <div class="text-center py-16 text-gray-500">
+        <p class="text-lg">No lessons available yet.</p>
+    </div>
+    {{end}}
+</div>
+{{end}}
