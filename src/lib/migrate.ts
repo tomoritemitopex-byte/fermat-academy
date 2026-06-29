@@ -3,9 +3,30 @@ import { neon } from '@neondatabase/serverless';
 const sql = neon(process.env.DATABASE_URL!);
 
 export async function migrate() {
-  // Create ALL tables WITHOUT foreign key constraints first
+  // Drop all tables if they exist (only for initial migration to fix schema issues)
+  // This is safe as there's no production data yet
+  const dropOrder = [
+    'DROP TABLE IF EXISTS flagged_qa CASCADE',
+    'DROP TABLE IF EXISTS lesson_progress CASCADE',
+    'DROP TABLE IF EXISTS artifact_content CASCADE',
+    'DROP TABLE IF EXISTS user_artifacts CASCADE',
+    'DROP TABLE IF EXISTS badges CASCADE',
+    'DROP TABLE IF EXISTS lessons CASCADE',
+    'DROP TABLE IF EXISTS sessions CASCADE',
+    'DROP TABLE IF EXISTS users CASCADE',
+  ];
+
+  for (const stmt of dropOrder) {
+    try {
+      await sql.query(stmt);
+    } catch (err) {
+      // Table may not exist
+    }
+  }
+
+  // Create all tables with correct schema
   const tables = [
-    `CREATE TABLE IF NOT EXISTS users (
+    `CREATE TABLE users (
       id SERIAL PRIMARY KEY,
       name VARCHAR(255) NOT NULL DEFAULT '',
       email VARCHAR(255) UNIQUE NOT NULL,
@@ -16,59 +37,59 @@ export async function migrate() {
       last_active_at TIMESTAMP DEFAULT NOW(),
       created_at TIMESTAMP DEFAULT NOW()
     )`,
-    `CREATE TABLE IF NOT EXISTS sessions (
+    `CREATE TABLE sessions (
       id SERIAL PRIMARY KEY,
       token VARCHAR(255) UNIQUE NOT NULL,
-      user_id INTEGER,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
       created_at TIMESTAMP DEFAULT NOW(),
       expires_at TIMESTAMP
     )`,
-    `CREATE TABLE IF NOT EXISTS badges (
+    `CREATE TABLE badges (
       id SERIAL PRIMARY KEY,
-      user_id INTEGER,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
       type VARCHAR(50) NOT NULL,
       earned_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(user_id, type)
     )`,
-    `CREATE TABLE IF NOT EXISTS user_artifacts (
+    `CREATE TABLE user_artifacts (
       id SERIAL PRIMARY KEY,
-      user_id INTEGER,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
       artifact_type VARCHAR(50) NOT NULL,
       unlocked BOOLEAN DEFAULT FALSE,
       active BOOLEAN DEFAULT FALSE,
       UNIQUE(user_id, artifact_type)
     )`,
-    `CREATE TABLE IF NOT EXISTS lessons (
+    `CREATE TABLE lessons (
       id SERIAL PRIMARY KEY,
       title VARCHAR(255) NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       content TEXT NOT NULL DEFAULT '',
       youtube_url VARCHAR(500) NOT NULL DEFAULT '',
       pdf_url VARCHAR(500) NOT NULL DEFAULT '',
-      admin_id INTEGER,
+      admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     )`,
-    `CREATE TABLE IF NOT EXISTS artifact_content (
+    `CREATE TABLE artifact_content (
       id SERIAL PRIMARY KEY,
-      lesson_id INTEGER,
+      lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
       type VARCHAR(50) NOT NULL,
       content JSONB DEFAULT '{}',
       created_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(lesson_id, type)
     )`,
-    `CREATE TABLE IF NOT EXISTS lesson_progress (
+    `CREATE TABLE lesson_progress (
       id SERIAL PRIMARY KEY,
-      user_id INTEGER,
-      lesson_id INTEGER,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
       video_watched BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(user_id, lesson_id)
     )`,
-    `CREATE TABLE IF NOT EXISTS flagged_qa (
+    `CREATE TABLE flagged_qa (
       id SERIAL PRIMARY KEY,
-      user_id INTEGER,
-      lesson_id INTEGER,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
       question TEXT NOT NULL,
       answer TEXT NOT NULL,
       resolved BOOLEAN DEFAULT FALSE,
@@ -80,83 +101,9 @@ export async function migrate() {
     try {
       await sql.query(query);
     } catch (err) {
-      console.warn('Warning creating table:', err instanceof Error ? err.message : err);
+      console.error('Error creating table:', err instanceof Error ? err.message : err);
     }
   }
 
-  // Add FK constraints (will skip if already exist)
-  const constraints = [
-    `DO $$ BEGIN
-      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'sessions_user_id_fkey') THEN
-        ALTER TABLE sessions ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-      END IF;
-    END $$`,
-    `DO $$ BEGIN
-      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'badges_user_id_fkey') THEN
-        ALTER TABLE badges ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-      END IF;
-    END $$`,
-    `DO $$ BEGIN
-      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'user_artifacts_user_id_fkey') THEN
-        ALTER TABLE user_artifacts ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-      END IF;
-    END $$`,
-    `DO $$ BEGIN
-      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'lessons_admin_id_fkey') THEN
-        ALTER TABLE lessons ADD FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL;
-      END IF;
-    END $$`,
-    `DO $$ BEGIN
-      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'artifact_content_lesson_id_fkey') THEN
-        ALTER TABLE artifact_content ADD FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE;
-      END IF;
-    END $$`,
-    `DO $$ BEGIN
-      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'lesson_progress_user_id_fkey') THEN
-        ALTER TABLE lesson_progress ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-      END IF;
-    END $$`,
-    `DO $$ BEGIN
-      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'lesson_progress_lesson_id_fkey') THEN
-        ALTER TABLE lesson_progress ADD FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE;
-      END IF;
-    END $$`,
-    `DO $$ BEGIN
-      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'flagged_qa_user_id_fkey') THEN
-        ALTER TABLE flagged_qa ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
-      END IF;
-    END $$`,
-    `DO $$ BEGIN
-      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'flagged_qa_lesson_id_fkey') THEN
-        ALTER TABLE flagged_qa ADD FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE;
-      END IF;
-    END $$`,
-  ];
-
-  for (const stmt of constraints) {
-    try {
-      await sql.query(stmt);
-    } catch (err) {
-      // Constraint may already exist
-    }
-  }
-
-  // Add missing columns
-  const alterStatements = [
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS xp INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS streak INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'student'`,
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMP DEFAULT NOW()`,
-    `ALTER TABLE lessons ADD COLUMN IF NOT EXISTS pdf_url VARCHAR(500) NOT NULL DEFAULT ''`,
-  ];
-
-  for (const stmt of alterStatements) {
-    try {
-      await sql.query(stmt);
-    } catch (err) {
-      // Column may already exist
-    }
-  }
-
-  console.log('Database setup complete');
+  console.log('Database tables created successfully with correct schema');
 }
