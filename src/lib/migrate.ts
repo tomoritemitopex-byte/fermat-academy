@@ -3,30 +3,9 @@ import { neon } from '@neondatabase/serverless';
 const sql = neon(process.env.DATABASE_URL!);
 
 export async function migrate() {
-  // Drop all tables if they exist (only for initial migration to fix schema issues)
-  // This is safe as there's no production data yet
-  const dropOrder = [
-    'DROP TABLE IF EXISTS flagged_qa CASCADE',
-    'DROP TABLE IF EXISTS lesson_progress CASCADE',
-    'DROP TABLE IF EXISTS artifact_content CASCADE',
-    'DROP TABLE IF EXISTS user_artifacts CASCADE',
-    'DROP TABLE IF EXISTS badges CASCADE',
-    'DROP TABLE IF EXISTS lessons CASCADE',
-    'DROP TABLE IF EXISTS sessions CASCADE',
-    'DROP TABLE IF EXISTS users CASCADE',
-  ];
-
-  for (const stmt of dropOrder) {
-    try {
-      await sql.query(stmt);
-    } catch (err) {
-      // Table may not exist
-    }
-  }
-
-  // Create all tables with correct schema
+  // Create all tables if they don't exist (preserves existing data)
   const tables = [
-    `CREATE TABLE users (
+    `CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
       name VARCHAR(255) NOT NULL DEFAULT '',
       email VARCHAR(255) UNIQUE NOT NULL,
@@ -37,21 +16,21 @@ export async function migrate() {
       last_active_at TIMESTAMP DEFAULT NOW(),
       created_at TIMESTAMP DEFAULT NOW()
     )`,
-    `CREATE TABLE sessions (
+    `CREATE TABLE IF NOT EXISTS sessions (
       id SERIAL PRIMARY KEY,
       token VARCHAR(255) UNIQUE NOT NULL,
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
       created_at TIMESTAMP DEFAULT NOW(),
       expires_at TIMESTAMP
     )`,
-    `CREATE TABLE badges (
+    `CREATE TABLE IF NOT EXISTS badges (
       id SERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
       type VARCHAR(50) NOT NULL,
       earned_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(user_id, type)
     )`,
-    `CREATE TABLE user_artifacts (
+    `CREATE TABLE IF NOT EXISTS user_artifacts (
       id SERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
       artifact_type VARCHAR(50) NOT NULL,
@@ -59,18 +38,20 @@ export async function migrate() {
       active BOOLEAN DEFAULT FALSE,
       UNIQUE(user_id, artifact_type)
     )`,
-    `CREATE TABLE lessons (
+    `CREATE TABLE IF NOT EXISTS lessons (
       id SERIAL PRIMARY KEY,
       title VARCHAR(255) NOT NULL,
       description TEXT NOT NULL DEFAULT '',
       content TEXT NOT NULL DEFAULT '',
+      class_level VARCHAR(10) NOT NULL DEFAULT '',
+      department VARCHAR(20) NOT NULL DEFAULT '',
       youtube_url VARCHAR(500) NOT NULL DEFAULT '',
       pdf_url VARCHAR(500) NOT NULL DEFAULT '',
       admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     )`,
-    `CREATE TABLE artifact_content (
+    `CREATE TABLE IF NOT EXISTS artifact_content (
       id SERIAL PRIMARY KEY,
       lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
       type VARCHAR(50) NOT NULL,
@@ -78,7 +59,7 @@ export async function migrate() {
       created_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(lesson_id, type)
     )`,
-    `CREATE TABLE lesson_progress (
+    `CREATE TABLE IF NOT EXISTS lesson_progress (
       id SERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
       lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
@@ -86,7 +67,7 @@ export async function migrate() {
       created_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(user_id, lesson_id)
     )`,
-    `CREATE TABLE flagged_qa (
+    `CREATE TABLE IF NOT EXISTS flagged_qa (
       id SERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
@@ -105,5 +86,19 @@ export async function migrate() {
     }
   }
 
-  console.log('Database tables created successfully with correct schema');
+  // Add any missing columns for schema evolution (data-safe ALTER TABLE)
+  const alterStatements = [
+    "ALTER TABLE lessons ADD COLUMN IF NOT EXISTS class_level VARCHAR(10) NOT NULL DEFAULT ''",
+    "ALTER TABLE lessons ADD COLUMN IF NOT EXISTS department VARCHAR(20) NOT NULL DEFAULT ''",
+  ];
+
+  for (const stmt of alterStatements) {
+    try {
+      await sql.query(stmt);
+    } catch (err) {
+      // Column may already exist
+    }
+  }
+
+  console.log('Database schema verified successfully');
 }
