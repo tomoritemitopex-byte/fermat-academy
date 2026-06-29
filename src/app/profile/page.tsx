@@ -26,103 +26,99 @@ export default async function ProfilePage() {
   ];
 
   const artifactRows = await sql.query(
-    'SELECT artifact_type, unlocked, active FROM user_artifacts WHERE user_id = $1',
-    [user.id]
+    'SELECT artifact_type, unlocked, active FROM user_artifacts WHERE user_id = $1', [user.id]
   );
-
   const artifactMap = new Map<string, { unlocked: boolean; active: boolean }>();
-  artifactRows.forEach((a: any) => {
-    artifactMap.set(a.artifact_type, { unlocked: a.unlocked, active: a.active });
-  });
-
-  const getArtifact = (type: string) =>
-    artifactMap.get(type) || { unlocked: false, active: false };
+  artifactRows.forEach((a: any) => artifactMap.set(a.artifact_type, { unlocked: a.unlocked, active: a.active }));
+  const getArtifact = (type: string) => artifactMap.get(type) || { unlocked: false, active: false };
 
   const pairs = [
-    {
-      pairName: 'Study Tools',
-      items: [
-        { type: 'highlighters', name: 'Auto Highlighter', icon: '🖌️', ...getArtifact('highlighters') },
-        { type: 'flashcards', name: 'Flashcards', icon: '🃏', ...getArtifact('flashcards') },
-      ],
-    },
-    {
-      pairName: 'Learning Materials',
-      items: [
-        { type: 'textbook', name: 'Textbook PDF', icon: '📖', ...getArtifact('textbook') },
-        { type: 'audio', name: 'Audio Lesson', icon: '🎧', ...getArtifact('audio') },
-      ],
-    },
+    { pairName: 'Study Tools', items: [
+      { type: 'highlighters', name: 'Auto Highlighter', icon: '🖌️', ...getArtifact('highlighters') },
+      { type: 'flashcards', name: 'Flashcards', icon: '🃏', ...getArtifact('flashcards') },
+    ]},
+    { pairName: 'Learning Materials', items: [
+      { type: 'textbook', name: 'Textbook PDF', icon: '📖', ...getArtifact('textbook') },
+      { type: 'audio', name: 'Audio Lesson', icon: '🎧', ...getArtifact('audio') },
+    ]},
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      {/* Profile Card */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="text-center">
-          <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl font-bold text-purple-600">
-              {user.name.charAt(0).toUpperCase()}
-            </span>
+    <div className="max-w-5xl mx-auto animate-fade-in">
+      {/* Profile header */}
+      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 md:p-10 mb-8">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+          <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-violet-400 rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-lg shrink-0">
+            {user.name.charAt(0).toUpperCase()}
           </div>
-          <h1 className="text-xl font-bold text-gray-900">{user.name}</h1>
-          <p className="text-sm text-gray-500">{user.email}</p>
-          {user.role === 'admin' && (
-            <span className="inline-block mt-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-              Admin
-            </span>
-          )}
-        </div>
-        <div className="mt-6 space-y-3">
-          {user.class_level && (
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Class</span>
-              <span className="font-semibold text-gray-900">{user.class_level}</span>
+          <div className="text-center md:text-left flex-1">
+            <h1 className="text-2xl font-bold text-gray-900">{user.name}</h1>
+            <p className="text-gray-500 text-sm">{user.email}</p>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-3">
+              {user.class_level && <span className="bg-purple-50 text-purple-700 text-xs font-medium px-3 py-1 rounded-full">{user.class_level}</span>}
+              {user.department && <span className="bg-blue-50 text-blue-700 text-xs font-medium px-3 py-1 rounded-full">{user.department}</span>}
+              {user.role === 'admin' && <span className="bg-amber-50 text-amber-700 text-xs font-medium px-3 py-1 rounded-full">Admin</span>}
             </div>
-          )}
-          {user.department && (
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Department</span>
-              <span className="font-semibold text-gray-900">{user.department}</span>
+          </div>
+          <div className="flex gap-6 md:gap-10 text-center">
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{getLevel(user.xp)}</p>
+              <p className="text-xs text-gray-500">Level</p>
             </div>
-          )}
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Level</span>
-            <span className="font-semibold text-gray-900">{getLevel(user.xp)}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">XP</span>
-            <span className="font-semibold text-purple-600">{user.xp}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Streak</span>
-            <span className="font-semibold text-orange-600">{user.streak} days</span>
+            <div>
+              <p className="text-2xl font-bold text-purple-600">{user.xp}</p>
+              <p className="text-xs text-gray-500">XP</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-orange-600">{user.streak}</p>
+              <p className="text-xs text-gray-500">Day streak</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Badges & Artifacts */}
-      <div className="lg:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Badges */}
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Badges</h2>
-          <div className="grid grid-cols-4 gap-4">
-            {badgeList.map((badge) => (
-              <div
-                key={badge.type}
-                className={`text-center p-3 rounded-lg ${
-                  badge.earned ? 'bg-purple-50' : 'bg-gray-50 opacity-40'
-                }`}
-              >
-                <div className="text-2xl mb-1">{badge.icon}</div>
-                <div className="text-xs font-medium text-gray-600">{badge.name}</div>
-              </div>
-            ))}
+        <div className="lg:col-span-2 space-y-8">
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 card-hover shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900 mb-5">🏅 Badges</h2>
+            <div className="grid grid-cols-4 gap-4">
+              {badgeList.map((badge) => (
+                <div key={badge.type}
+                  className={`text-center p-4 rounded-xl transition ${
+                    badge.earned ? 'bg-purple-50 shadow-sm' : 'bg-gray-50 opacity-40'
+                  }`}>
+                  <div className="text-3xl mb-1">{badge.icon}</div>
+                  <div className="text-xs font-medium text-gray-600">{badge.name}</div>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Artifacts */}
+          <ProfileClient pairs={pairs} userId={user.id} />
         </div>
 
-        {/* Artifacts */}
-        <ProfileClient pairs={pairs} userId={user.id} />
+        {/* XP sidebar */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 card-hover shadow-sm h-fit">
+          <h3 className="font-semibold text-gray-900 mb-4">📈 Progress</h3>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-500">Level {getLevel(user.xp)}</span>
+                <span className="text-gray-400 text-xs">{user.xp} XP</span>
+              </div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-purple-500 to-violet-400 rounded-full transition-all"
+                  style={{ width: `${Math.min((user.xp % 500) / 5, 100)}%` }} />
+              </div>
+            </div>
+            <div className="text-sm text-gray-500 space-y-2">
+              <div className="flex justify-between"><span>Lessons viewed</span><span className="font-medium text-gray-900">—</span></div>
+              <div className="flex justify-between"><span>Streak</span><span className="font-medium text-gray-900">{user.streak} days</span></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
