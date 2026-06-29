@@ -9,9 +9,9 @@ export default async function LeaderboardPage() {
   const user = await getSessionUser();
 
   const rows = await sql.query(
-    `SELECT u.name, u.xp FROM users u
-     WHERE u.role = 'student' AND u.xp > 0
-     ORDER BY u.xp DESC LIMIT 100`
+    `SELECT name, xp FROM users
+     WHERE role = 'student' AND xp > 0
+     ORDER BY xp DESC LIMIT 100`
   );
 
   interface Entry {
