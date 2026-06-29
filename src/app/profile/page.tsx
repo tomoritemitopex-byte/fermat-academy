@@ -74,6 +74,18 @@ export default async function ProfilePage() {
           )}
         </div>
         <div className="mt-6 space-y-3">
+          {user.class_level && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Class</span>
+              <span className="font-semibold text-gray-900">{user.class_level}</span>
+            </div>
+          )}
+          {user.department && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Department</span>
+              <span className="font-semibold text-gray-900">{user.department}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Level</span>
             <span className="font-semibold text-gray-900">{getLevel(user.xp)}</span>

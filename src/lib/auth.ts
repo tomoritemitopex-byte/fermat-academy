@@ -54,7 +54,9 @@ export async function getSessionUser(): Promise<User | null> {
     if (!token) return null;
 
     const rows = await sql.query(
-      `SELECT u.id, u.name, u.email, u.password_hash, u.role, u.xp, u.streak, u.last_active_at, u.created_at
+      `SELECT u.id, u.name, u.email, u.password_hash, u.role,
+              u.class_level, u.department,
+              u.xp, u.streak, u.last_active_at, u.created_at
        FROM sessions s
        JOIN users u ON u.id = s.user_id
        WHERE s.token = $1 AND s.expires_at > NOW()`,
@@ -70,6 +72,8 @@ export async function getSessionUser(): Promise<User | null> {
       email: row.email,
       password_hash: row.password_hash,
       role: row.role,
+      class_level: row.class_level || '',
+      department: row.department || '',
       xp: row.xp,
       streak: row.streak,
       last_active_at: row.last_active_at?.toString() || '',

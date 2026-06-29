@@ -37,9 +37,15 @@ interface Lesson {
 
 export default async function LessonsPage() {
   const user = await getSessionUser();
+  const userLevel = user?.class_level || '';
+  const userDept = user?.department || '';
 
+  // If user has a class/department, only show relevant lessons
   const rows = await sql.query(
-    'SELECT id, title, description, class_level, department FROM lessons ORDER BY class_level, department, title'
+    userLevel && userDept
+      ? 'SELECT id, title, description, class_level, department FROM lessons WHERE class_level = $1 AND department = $2 ORDER BY title'
+      : 'SELECT id, title, description, class_level, department FROM lessons ORDER BY class_level, department, title',
+    userLevel && userDept ? [userLevel, userDept] : []
   );
   const lessons = rows as Lesson[];
 
@@ -61,11 +67,27 @@ export default async function LessonsPage() {
         <p className="text-gray-500">
           WAEC &amp; NECO syllabus — SS1 through SS3
         </p>
+        {user && userLevel && userDept ? (
+          <div className="mt-2">
+            <span className="inline-flex items-center gap-1.5 text-sm bg-purple-50 text-purple-700 px-3 py-1 rounded-full">
+              Showing <strong>{userLevel}</strong> · <strong>{userDept}</strong>
+            </span>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400 mt-2">
+            <Link href="/signup" className="text-purple-500 hover:underline">Sign up</Link> to see only your class and department
+          </p>
+        )}
       </div>
 
       {lessons.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
-          <p className="text-lg">No lessons yet. Check back soon!</p>
+          <p className="text-lg">No lessons yet for your selection.</p>
+          {userLevel && userDept && (
+            <p className="text-sm text-gray-400 mt-1">
+              Found none for {userLevel} — {userDept}
+            </p>
+          )}
         </div>
       ) : (
         <div className="space-y-16">
@@ -82,7 +104,7 @@ export default async function LessonsPage() {
                   </div>
                   <div className="h-px flex-1 bg-gray-200" />
                   <span className="text-sm text-gray-400">
-                    {(Object.values(depts).reduce((a, b) => a + b.length, 0))} lessons
+                    {Object.values(depts).reduce((a, b) => a + b.length, 0)} lessons
                   </span>
                 </div>
 
@@ -107,7 +129,6 @@ export default async function LessonsPage() {
                         {/* Lesson list */}
                         <div className="divide-y divide-gray-100">
                           {deptLessons.map((lesson) => {
-                            // Extract subject and topic from title like "SS1 Commerce — Introduction to Commerce"
                             const parts = lesson.title.split(' — ');
                             const subject = parts[0]?.replace(/^(SS[123])\s+/, '') || lesson.title;
                             const topic = parts[1] || '';

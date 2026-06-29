@@ -4,6 +4,8 @@ export interface User {
   email: string;
   password_hash: string;
   role: string;
+  class_level: string;
+  department: string;
   xp: number;
   streak: number;
   last_active_at: string;

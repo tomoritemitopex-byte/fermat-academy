@@ -1,39 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
-import { getSessionUser } from '@/lib/auth';
 
 const sql = neon(process.env.DATABASE_URL!);
 
+const SYSTEM_PROMPT = `You are Dr. Femi, a passionate and patient Nigerian high school teacher. You teach according to the WAEC and NECO syllabus. Your personality:
+
+- Warm, encouraging, and supportive — you believe every student can succeed
+- Use Nigerian examples and context (naira, Lagos, local businesses, etc.)
+- Break down complex topics into simple, relatable explanations
+- If a student is stuck, ask guiding questions rather than giving the answer
+- Keep answers concise but thorough — exam-focused
+- If you don't know something, say so honestly
+- NEVER do the student's homework for them — guide them to figure it out
+- Occasionally share study tips and exam strategies
+
+Respond naturally as Dr. Femi would speak.`;
+
 export async function POST(req: NextRequest) {
   try {
-    const { message, lesson_id } = await req.json();
-    const user = await getSessionUser();
+    const { message, lesson_id, history } = await req.json();
 
     if (!message) {
-      return NextResponse.json({ reply: 'Message is required', flagged: false }, { status: 400 });
+      return NextResponse.json({ reply: 'Please type a question!', flagged: false }, { status: 400 });
     }
 
     // Fetch lesson context
     let lessonContent = '';
     if (lesson_id && lesson_id > 0) {
-      const rows = await sql.query('SELECT content FROM lessons WHERE id = $1', [lesson_id]);
+      const rows = await sql.query(
+        'SELECT content FROM lessons WHERE id = $1',
+        [lesson_id]
+      );
       if (rows.length > 0) {
         lessonContent = (rows[0] as any).content || '';
       }
     }
 
-    const { reply, flagged } = await queryNVIDIA(message, lessonContent);
+    const { reply, shouldFlag } = await queryNVIDIA(message, lessonContent, history || []);
 
-    // Flag if the AI thinks the question needs attention
-    if (flagged && lesson_id && lesson_id > 0) {
-      const userId = user?.id ?? null;
-      await sql.query(
-        'INSERT INTO flagged_qa (user_id, lesson_id, question, answer) VALUES ($1, $2, $3, $4)',
-        [userId, lesson_id, message, reply]
-      );
+    // Only flag questions that genuinely need admin attention
+    if (shouldFlag && lesson_id && lesson_id > 0) {
+      try {
+        await sql.query(
+          'INSERT INTO flagged_qa (lesson_id, question, answer) VALUES ($1, $2, $3)',
+          [lesson_id, message, reply]
+        );
+      } catch {
+        // Non-critical — don't break the response
+      }
     }
 
-    return NextResponse.json({ reply, flagged });
+    return NextResponse.json({ reply, flagged: shouldFlag });
   } catch (err) {
     console.error('DrFemiChat error:', err);
     return NextResponse.json(
@@ -45,26 +62,37 @@ export async function POST(req: NextRequest) {
 
 async function queryNVIDIA(
   message: string,
-  context: string
-): Promise<{ reply: string; flagged: boolean }> {
+  context: string,
+  history: { role: string; content: string }[]
+): Promise<{ reply: string; shouldFlag: boolean }> {
   const apiKey = process.env.NVIDIA_API_KEY;
-
   if (!apiKey) {
-    return {
-      reply: 'AI is not configured yet. Please set NVIDIA_API_KEY.',
-      flagged: false,
-    };
+    return { reply: 'AI is not configured yet.', shouldFlag: false };
   }
 
-  let prompt = message;
+  // Build messages array with system prompt, context, history, and current question
+  const messages: { role: string; content: string }[] = [
+    { role: 'system', content: SYSTEM_PROMPT },
+  ];
+
   if (context) {
-    prompt =
-      'Context from lesson notes:\n' +
-      context +
-      '\n\nStudent question: ' +
-      message +
-      "\n\nAnswer the question using the context above. If the context doesn't contain the answer, answer from general knowledge and flag this.";
+    messages.push({
+      role: 'system',
+      content: `Here are the lesson notes for context:\n\n${context}`,
+    });
   }
+
+  // Add conversation history (last 6 messages to stay within token limits)
+  const recentHistory = (history || []).slice(-6);
+  for (const msg of recentHistory) {
+    messages.push(msg);
+  }
+
+  messages.push({ role: 'user', content: message });
+
+  // We ask the AI whether this question should be flagged for the admin
+  // instead of trying to detect it with string matching
+  const flagCheckPrompt = message + '\n\n(If this question is inappropriate, off-topic, or needs teacher intervention, prefix your answer with FLAG: . Otherwise answer normally.)';
 
   try {
     const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
@@ -75,27 +103,32 @@ async function queryNVIDIA(
       },
       body: JSON.stringify({
         model: 'meta/llama-3.1-8b-instruct',
-        messages: [{ role: 'user', content: prompt }],
+        messages,
         temperature: 0.3,
         max_tokens: 500,
       }),
     });
 
     if (!res.ok) {
-      return { reply: 'Sorry, I\'m having trouble connecting to the AI service.', flagged: false };
+      return { reply: "Sorry, I'm having trouble connecting to the AI service.", shouldFlag: false };
     }
 
     const result = await res.json();
-    const reply = result.choices?.[0]?.message?.content?.trim();
-    const flagged = prompt.toLowerCase().includes('flag this');
+    let reply: string = result.choices?.[0]?.message?.content?.trim() || '';
 
-    if (reply) {
-      return { reply, flagged };
+    if (!reply) {
+      return { reply: "I'm not sure how to answer that.", shouldFlag: false };
     }
 
-    return { reply: "I'm not sure how to answer that.", flagged: false };
+    // Check if the AI flagged this response
+    const shouldFlag = reply.startsWith('FLAG:');
+    if (shouldFlag) {
+      reply = reply.replace(/^FLAG:\s*/, '');
+    }
+
+    return { reply, shouldFlag };
   } catch (err) {
     console.error('NVIDIA API error:', err);
-    return { reply: 'Sorry, I\'m having trouble connecting to the AI service.', flagged: false };
+    return { reply: "Sorry, I'm having trouble connecting to the AI service.", shouldFlag: false };
   }
 }

@@ -11,6 +11,8 @@ export async function migrate() {
       email VARCHAR(255) UNIQUE NOT NULL,
       password_hash VARCHAR(255) NOT NULL DEFAULT '',
       role VARCHAR(20) NOT NULL DEFAULT 'student',
+      class_level VARCHAR(10) NOT NULL DEFAULT '',
+      department VARCHAR(20) NOT NULL DEFAULT '',
       xp INTEGER NOT NULL DEFAULT 0,
       streak INTEGER NOT NULL DEFAULT 0,
       last_active_at TIMESTAMP DEFAULT NOW(),
@@ -88,6 +90,8 @@ export async function migrate() {
 
   // Add any missing columns for schema evolution (data-safe ALTER TABLE)
   const alterStatements = [
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS class_level VARCHAR(10) NOT NULL DEFAULT ''",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(20) NOT NULL DEFAULT ''",
     "ALTER TABLE lessons ADD COLUMN IF NOT EXISTS class_level VARCHAR(10) NOT NULL DEFAULT ''",
     "ALTER TABLE lessons ADD COLUMN IF NOT EXISTS department VARCHAR(20) NOT NULL DEFAULT ''",
   ];
