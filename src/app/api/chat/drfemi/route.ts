@@ -67,7 +67,7 @@ async function queryNVIDIA(
   }
 
   try {
-    const res = await fetch('https://api.nvcf.nvidia.com/v2/llm/chat/completions', {
+    const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

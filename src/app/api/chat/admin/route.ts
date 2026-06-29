@@ -42,7 +42,7 @@ async function queryNVIDIAAdmin(message: string, context: string): Promise<strin
   const prompt = `You are an analytics assistant for Fermat Academy admin. ${context}\n\nAdmin question: ${message}`;
 
   try {
-    const res = await fetch('https://api.nvcf.nvidia.com/v2/llm/chat/completions', {
+    const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
