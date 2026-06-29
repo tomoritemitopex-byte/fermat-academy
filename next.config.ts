@@ -7,9 +7,6 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "2mb",
     },
   },
-  turbopack: {
-    root: "/home/tomoritemitopex/fermat-academy",
-  },
 };
 
 export default nextConfig;

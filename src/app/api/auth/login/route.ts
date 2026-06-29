@@ -44,8 +44,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, redirect });
   } catch (err) {
     console.error('Login error:', err);
+    const message = err instanceof Error ? err.message : 'Something went wrong';
     return NextResponse.json(
-      { error: 'Something went wrong' },
+      { error: message },
       { status: 500 }
     );
   }
