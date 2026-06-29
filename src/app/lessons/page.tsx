@@ -6,106 +6,144 @@ export const dynamic = 'force-dynamic';
 
 const sql = neon(process.env.DATABASE_URL!);
 
-const CLASS_LEVELS = ['SS1', 'SS2', 'SS3'];
-const DEPARTMENTS = ['Commercial', 'Science', 'Tech', 'Arts'];
-
-const DEPARTMENT_COLORS: Record<string, string> = {
-  Commercial: 'border-l-emerald-500',
-  Science: 'border-l-blue-500',
-  Tech: 'border-l-orange-500',
-  Arts: 'border-l-purple-500',
+const DEPT_ICONS: Record<string, string> = {
+  Commercial: '💰',
+  Science: '🔬',
+  Tech: '⚙️',
+  Arts: '🎭',
 };
 
-const DEPARTMENT_BG: Record<string, string> = {
-  Commercial: 'bg-emerald-50 text-emerald-700',
-  Science: 'bg-blue-50 text-blue-700',
-  Tech: 'bg-orange-50 text-orange-700',
-  Arts: 'bg-purple-50 text-purple-700',
+const DEPT_COLORS: Record<string, string> = {
+  Commercial: 'from-emerald-500 to-emerald-600',
+  Science: 'from-blue-500 to-blue-600',
+  Tech: 'from-orange-500 to-orange-600',
+  Arts: 'from-purple-500 to-purple-600',
 };
+
+const DEPT_LIGHT: Record<string, string> = {
+  Commercial: 'bg-emerald-50 border-emerald-200 hover:border-emerald-300',
+  Science: 'bg-blue-50 border-blue-200 hover:border-blue-300',
+  Tech: 'bg-orange-50 border-orange-200 hover:border-orange-300',
+  Arts: 'bg-purple-50 border-purple-200 hover:border-purple-300',
+};
+
+interface Lesson {
+  id: number;
+  title: string;
+  description: string;
+  class_level: string;
+  department: string;
+}
 
 export default async function LessonsPage() {
   const user = await getSessionUser();
 
-  const lessons = await sql.query(
-    'SELECT id, title, description, class_level, department, created_at FROM lessons ORDER BY class_level, department, title'
+  const rows = await sql.query(
+    'SELECT id, title, description, class_level, department FROM lessons ORDER BY class_level, department, title'
   );
+  const lessons = rows as Lesson[];
 
-  // Group lessons by class_level and department
-  const grouped: Record<string, Record<string, any[]>> = {};
-  for (const level of CLASS_LEVELS) {
-    grouped[level] = {};
-    for (const dept of DEPARTMENTS) {
-      grouped[level][dept] = (lessons as any[]).filter(
-        (l: any) => l.class_level === level && l.department === dept
-      );
-    }
+  // Group: class_level → department → lessons[]
+  const grouped: Record<string, Record<string, Lesson[]>> = {};
+  for (const l of lessons) {
+    if (!grouped[l.class_level]) grouped[l.class_level] = {};
+    if (!grouped[l.class_level][l.department]) grouped[l.class_level][l.department] = [];
+    grouped[l.class_level][l.department].push(l);
   }
+
+  const classLevels = ['SS1', 'SS2', 'SS3'];
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">All Lessons</h1>
-      <p className="text-gray-500 mb-8">
-        Browse lessons by class and department
-      </p>
-
-      {/* Class tabs */}
-      <div className="space-y-12">
-        {CLASS_LEVELS.map((level) => {
-          const hasLessons = DEPARTMENTS.some(
-            (dept) => grouped[level][dept].length > 0
-          );
-          if (!hasLessons) return null;
-
-          return (
-            <section key={level}>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                <span className="bg-gray-900 text-white text-sm font-bold px-3 py-1 rounded-full mr-3">
-                  {level}
-                </span>
-                Senior Secondary
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {DEPARTMENTS.map((dept) => {
-                  const deptLessons = grouped[level][dept];
-                  if (deptLessons.length === 0) return null;
-
-                  return (
-                    <div
-                      key={`${level}-${dept}`}
-                      className={`bg-white rounded-xl shadow-sm border border-l-4 ${DEPARTMENT_COLORS[dept]} overflow-hidden`}
-                    >
-                      <div className={`px-4 py-2 font-semibold text-sm ${DEPARTMENT_BG[dept]}`}>
-                        {dept} Department
-                      </div>
-                      <div className="divide-y">
-                        {deptLessons.map((lesson: any) => (
-                          <Link
-                            key={lesson.id}
-                            href={`/lessons/${lesson.id}`}
-                            className="block px-4 py-3 hover:bg-gray-50 transition"
-                          >
-                            <h3 className="font-medium text-gray-900 text-sm">
-                              {lesson.title}
-                            </h3>
-                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                              {lesson.description}
-                            </p>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          );
-        })}
+      {/* Header */}
+      <div className="text-center mb-10">
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">📚 Lessons</h1>
+        <p className="text-gray-500">
+          WAEC &amp; NECO syllabus — SS1 through SS3
+        </p>
       </div>
 
-      {lessons.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
+      {lessons.length === 0 ? (
+        <div className="text-center py-16 text-gray-400">
           <p className="text-lg">No lessons yet. Check back soon!</p>
+        </div>
+      ) : (
+        <div className="space-y-16">
+          {classLevels.map((level) => {
+            const depts = grouped[level];
+            if (!depts) return null;
+
+            return (
+              <section key={level}>
+                {/* Class header */}
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="bg-gray-900 text-white text-lg font-bold px-5 py-1.5 rounded-full">
+                    {level}
+                  </div>
+                  <div className="h-px flex-1 bg-gray-200" />
+                  <span className="text-sm text-gray-400">
+                    {(Object.values(depts).reduce((a, b) => a + b.length, 0))} lessons
+                  </span>
+                </div>
+
+                {/* Department columns */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {(['Commercial', 'Science', 'Tech', 'Arts'] as const).map((dept) => {
+                    const deptLessons = depts[dept];
+                    if (!deptLessons || deptLessons.length === 0) return null;
+
+                    return (
+                      <div
+                        key={dept}
+                        className={`rounded-xl border-2 ${DEPT_LIGHT[dept]} transition overflow-hidden`}
+                      >
+                        {/* Department header */}
+                        <div className={`bg-gradient-to-r ${DEPT_COLORS[dept]} text-white px-5 py-3 flex items-center gap-2`}>
+                          <span className="text-lg">{DEPT_ICONS[dept]}</span>
+                          <span className="font-semibold">{dept}</span>
+                          <span className="ml-auto text-white/70 text-sm">{deptLessons.length}</span>
+                        </div>
+
+                        {/* Lesson list */}
+                        <div className="divide-y divide-gray-100">
+                          {deptLessons.map((lesson) => {
+                            // Extract subject and topic from title like "SS1 Commerce — Introduction to Commerce"
+                            const parts = lesson.title.split(' — ');
+                            const subject = parts[0]?.replace(/^(SS[123])\s+/, '') || lesson.title;
+                            const topic = parts[1] || '';
+
+                            return (
+                              <Link
+                                key={lesson.id}
+                                href={`/lessons/${lesson.id}`}
+                                className="block px-5 py-3.5 hover:bg-white/80 transition group"
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-gray-900 text-sm group-hover:text-gray-600 transition-colors">
+                                      {subject}
+                                    </p>
+                                    {topic && (
+                                      <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                        {topic}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <span className="text-gray-300 group-hover:text-gray-500 transition-colors shrink-0 mt-0.5">
+                                    →
+                                  </span>
+                                </div>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
     </div>
